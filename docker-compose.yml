@@ -1,0 +1,75 @@
+services:
+        
+  web:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.production
+    volumes:
+      - static_volume:/home/app/staticfiles
+    image: smitkukadiyabvminfotech/playstore_frontend:appwatch_backend
+    expose:
+      - 8000
+    depends_on:
+      - redis
+      - elasticsearch
+      - ollama
+
+  redis:
+    image: redis:alpine
+
+  celery_worker:
+    build: 
+      context: ./backend
+      args:
+        service: worker
+    command: celery -A backend worker -l info
+    env_file:
+      - .env.production
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    image: smitkukadiyabvminfotech/playstore_frontend:celery_worker
+    depends_on:
+      - web
+      - redis
+
+  celery_beat:
+    build: 
+      context: ./backend
+      args:
+        service: beat
+    command: celery -A backend beat -l info
+    env_file:
+      - .env.production
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    image: smitkukadiyabvminfotech/playstore_frontend:celery_beat
+    depends_on:
+      - web
+      - redis
+
+  elasticsearch:
+    image: elasticsearch:7.17.25
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+    ports:
+      - 11434:11434
+
+volumes:
+  static_volume:
+  certs:
+  html:
+  vhost:
+  acme:
+  esdata01:
