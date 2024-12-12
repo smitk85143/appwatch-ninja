@@ -75,8 +75,7 @@ async def refresh_token(request, payload: schemas.TokenSchema):
             return 400, {"error": "Invalid refresh token"}
 
         access_token = utils.create_access_token(user)
-        refresh = utils.create_refresh_token(user)
-        return 200, {"access": access_token, "refresh": refresh}
+        return 200, {"access": access_token}
 
     except jwt.ExpiredSignatureError:
         return 400, {"error": "Refresh token has expired"}
@@ -184,3 +183,21 @@ async def free_to_premium(request):
     user.subscription_type = "premium"
     await sync_to_async(user.save)()
     return {"message": "User is now premium"}
+
+
+@router.post("/auth/google", auth=None)
+def google_login(request, payload: schemas.TokenSchema):
+
+    token_info = utils.validate_google_id_token(payload.token)
+    if not token_info:
+        return HttpError(400, "Invalid ID token")
+
+    email = token_info.get("email")
+    if str(token_info.get("email_verified")).lower() == "true":
+        return HttpError(400, "Email is not verified by Google")
+    user, created = User.objects.get_or_create(email=email, defaults={"is_user_verified": True})
+
+    access_token = utils.create_access_token(user)
+    refresh_token = utils.create_refresh_token(user)
+
+    return {"message": "User logged in successfully", "access": access_token, "refresh": refresh_token}

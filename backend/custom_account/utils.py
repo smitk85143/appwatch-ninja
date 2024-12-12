@@ -3,6 +3,7 @@ from django.utils.timezone import datetime, timedelta
 import jwt
 from django.conf import settings
 import datetime as dt
+import requests
 
 from .mixins import EmailMessageHandler
 
@@ -40,3 +41,12 @@ def create_refresh_token(user):
         "iat": dt.datetime.now(dt.timezone.utc),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+
+def validate_google_id_token(id_token: str):
+    url = "https://oauth2.googleapis.com/tokeninfo"
+    params = {"id_token": id_token}
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    return None
