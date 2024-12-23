@@ -23,6 +23,7 @@ from custom_account.views import router as account_router
 from user.views import router as user_router
 from market_intelligence.views import router as market_intelligence_router
 from aso_app.views import router as aso_router
+from ai_conversation.views import router as ai_conversation_router
 
 api = NinjaAPI()
 
@@ -31,6 +32,7 @@ api.add_router('/account/', account_router, tags=['Account'])
 api.add_router('/user/', user_router, tags=['User'])
 api.add_router('/market_intelligence/', market_intelligence_router, tags=['Market Intelligence'])
 api.add_router('/aso/', aso_router, tags=['ASO'])
+api.add_router('/ai-conversation/', ai_conversation_router, tags=['AI Conversation'])
 
 urlpatterns = [
     path('admin/', admin.site.urls),

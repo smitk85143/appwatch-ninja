@@ -4,18 +4,12 @@ from ninja.errors import HttpError
 from django.db.models import Q
 from asgiref.sync import sync_to_async
 from haystack.query import SearchQuerySet
-from django.http import StreamingHttpResponse
-import json
-import asyncio
 
 from .paginations import CustomPaginator
 from . import schemas
 from .models import AppDetail, Developer
-from .utils import developer_data, retrieve_app_info_async, generate_response_async
-from custom_account.security import AuthBearer
 
 router = Router()
-    
 
 @router.get("/apps", response=schemas.PaginatedResponseSchema)
 async def list_apps(
@@ -69,22 +63,28 @@ async def list_developers(
         raise HttpError(500, "An error occurred while fetching developer data")
     
 
-@router.post("/developer", response=schemas.DeveloperSchema)
+@router.post("/developer", response=schemas.SingleDeveloperSchema)
 async def single_Developer(
     request,
     payload: schemas.DeveloperSlugSchema,
 ):
     try:
-        one_developer, data = await sync_to_async(developer_data)(payload.dev_id)
-        if one_developer is None:
-            raise HttpError(404, "Invaild Developer")
-        
-        response = {
-            "developer": one_developer,
-            "apps": data
+        developer_obj = await sync_to_async(Developer.objects.get)(slug=payload.dev_id)
+
+        if not developer_obj:
+            raise HttpError(404, "Developer not found")
+
+        developer_apps = await sync_to_async(list)(AppDetail.objects.filter(
+            Q(developer=developer_obj) & Q(name__isnull=False) & Q(hide__exact=False)
+        ).select_related('genre', 'store'))
+
+        if not developer_apps:
+            raise HttpError(404, "No apps found for the specified developer.") 
+    
+        return {
+            "developer": developer_obj,
+            "apps": developer_apps,
         }
-        
-        return response
     except Exception:
         HttpError(500, "An error occurred while fetching app data")
 
@@ -108,53 +108,3 @@ async def search_apps(request, q: str = Query(...)):
     
     except Exception:
         raise HttpError(400, "Invalid query")
-
-
-@router.post("/conversation", response=None, auth=AuthBearer())
-async def ai_conversation(request, payload: schemas.RequestOllamaSchema):
-    """
-    Handles the Ollama interaction asynchronously.
-    """
-    user_agent = request.headers.get("User-Agent", "")
-    print(user_agent)
-    if "curl" in user_agent.lower():
-        return StreamingHttpResponse(
-            f"event: error\ndata: {json.dumps({'error': 'Unsupported User-Agent'})}\n\n",
-            content_type="text/event-stream; charset=utf-8",
-        )
-    if not payload.message:
-        return StreamingHttpResponse(
-            f"event: error\ndata: {json.dumps({'error': 'Invalid message'})}\n\n",
-            content_type="text/event-stream; charset=utf-8",
-        )
-
-    app_info = await retrieve_app_info_async(payload.store, payload.app_id)
-
-    if "error" not in app_info:
-        app_context = (
-            "system",
-            "You are an intelligent assistant specializing in providing detailed and accurate information about mobile applications. "
-            "You can answer user queries regarding app details, such as the app's name, description, rating, developer, genre, installs, and other relevant features. "
-            "Please provide concise, informative, and professional responses. If a user asks about something unrelated to apps, kindly inform them that you can only assist with app-related queries. "
-            "If you do not have enough information to answer a specific question, let the user know politely and guide them to ask for app-related details."
-            f"\nApp details:\n"
-            f"Name: {app_info.get('name', 'Unknown')}\n"
-            f"Description: {app_info.get('description', 'Unknown')}\n"
-            f"Average Rating: {app_info.get('userAvgRating', 'Unknown')}\n"
-            f"Developer: {app_info.get('developer', 'Unknown')}\n"
-            f"Genre: {app_info.get('genre', 'Unknown')}\n"
-            f"Installs: {app_info.get('installs', 'Unknown')}\n"
-            f"Free: {app_info.get('free', 'Unknown')}\n"
-            f"Contains Ads: {app_info.get('containsAds', 'Unknown')}\n"
-            f"Offers In-App Purchases: {app_info.get('offersIAP', 'Unknown')}\n"
-            f"Developer Website: {app_info.get('developerWebsite', 'Unknown')}",
-        )
-        messages = [app_context, ("human", payload.message)]
-    else:
-        messages = [("system", app_info["error"]), ("human", payload.message)]
-
-    response = StreamingHttpResponse(
-        generate_response_async(messages), content_type="text/event-stream; charset=utf-8"
-    )
-
-    return response

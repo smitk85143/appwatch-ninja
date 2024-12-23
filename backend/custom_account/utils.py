@@ -27,6 +27,7 @@ REFRESH_TOKEN_LIFETIME = timedelta(days=7)
 def create_access_token(user):
     payload = {
         "user_id": user.id,
+        "type": "access",
         "password_changed_at": user.password_changed_at.isoformat() if user.password_changed_at else None,
         "exp": dt.datetime.now(dt.timezone.utc) + ACCESS_TOKEN_LIFETIME,
         "iat": dt.datetime.now(dt.timezone.utc),
@@ -36,6 +37,7 @@ def create_access_token(user):
 def create_refresh_token(user):
     payload = {
         "user_id": user.id,
+        "type": "refresh",
         "password_changed_at": user.password_changed_at.isoformat() if user.password_changed_at else None,
         "exp": dt.datetime.now(dt.timezone.utc) + REFRESH_TOKEN_LIFETIME,
         "iat": dt.datetime.now(dt.timezone.utc),

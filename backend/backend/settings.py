@@ -53,6 +53,7 @@ EXTENDED_APPS = [
     "user",
     "market_intelligence",
     "aso_app",
+    "ai_conversation",
     'ninja',
     'haystack',
     'django_celery_results',
@@ -100,24 +101,22 @@ ASGI_APPLICATION = 'backend.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-if not os.getenv('DATABASE_URL'):
+POSTGRES_DB=os.getenv('POSTGRES_DB')
+POSTGRES_USER=os.getenv('POSTGRES_USER')
+POSTGRES_PASSWORD=os.getenv('POSTGRES_PASSWORD')
+POSTGRES_HOST=os.getenv('POSTGRES_HOST')
+POSTGRES_PORT=os.getenv('POSTGRES_PORT')
 
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'appAnalysisTest', 
-            'USER': 'postgres',
-            'PASSWORD': 'admin',
-            'HOST': '127.0.0.1', 
-            'PORT': '5432',
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': POSTGRES_DB, 
+        'USER': POSTGRES_USER,
+        'PASSWORD': POSTGRES_PASSWORD,
+        'HOST': POSTGRES_HOST, 
+        'PORT': POSTGRES_PORT,
     }
-else:
-    import dj_database_url
-    db_from_env = dj_database_url.config(default=os.getenv('DATABASE_URL'))
-    DATABASES = {
-        'default': db_from_env
-    }
+}
 
 
 # Password validation

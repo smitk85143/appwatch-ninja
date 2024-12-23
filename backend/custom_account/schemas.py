@@ -20,6 +20,10 @@ class ResponseAccessRefreshTokenSchema(Schema):
     refresh: str
 
 
+class ResponseAccessTokenSchema(Schema):
+    access: str
+
+
 class ResponseErrorUserIdSchema(Schema):
     error: str
     user_id: str

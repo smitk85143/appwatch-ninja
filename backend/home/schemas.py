@@ -58,9 +58,18 @@ class DeveloperListSchema(Schema):
     total_pages: int
 
 
-class DeveloperSchema(Schema):
-    developer: SingleDeveloperListSchema
-    apps: List[AppListDetailSchema]
+class DeveloperAppSchema(ModelSchema):
+    genre: GenreSchema
+    store: StoreSchema
+
+    class Meta:
+        model = AppDetail
+        fields = ['appID', 'name', 'released', 'userAvgRating', 'ratings', 'icon', 'downloads', 'removed', 'genre', 'store']
+
+
+class SingleDeveloperSchema(Schema):
+    developer: DeveloperSchema
+    apps: List[DeveloperAppSchema]
 
 
 class AppSearchDetailSchema(Schema):
@@ -68,18 +77,6 @@ class AppSearchDetailSchema(Schema):
     name: str
     icon: str
     store: str
-
-
-class RequestOllamaSchema(Schema):
-    store: str
-    app_id: str
-    message: str
-
-    @field_validator("store")
-    def validate_store(cls, value):
-        if value not in ['google', 'apple']:
-            raise ValueError("Invalid store name")
-        return value
     
 
 class PaginatedResponseSchema(Schema):

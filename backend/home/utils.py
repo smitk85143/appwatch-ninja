@@ -1,11 +1,6 @@
 from django.db.models import Q
 from django.utils import timezone
 from itunes_app_scraper.util import AppStoreCategories
-from django.forms.models import model_to_dict
-import json
-from .schemas import AppDetailSchema
-from langchain_ollama import ChatOllama
-from django.conf import settings
 
 from .models import CountryCode, Developer, Genre, AppDetail
 
@@ -17,11 +12,6 @@ exclude_countries = { 'google' : {'KP', 'RU', 'SX', 'SS', 'SY'},
                     }
        }
 
-llm = ChatOllama(
-    base_url=settings.OLLAMA_BASE_URL,
-    model="llama3.2:1b",
-    temperature=0,
-)
 
 def developer_data(slug):
     data = AppDetail.objects.filter(Q(developer__slug=slug) & Q(name__isnull=False) & Q(hide__exact=False)).select_related("genre", "store")
@@ -55,33 +45,6 @@ def developer_data(slug):
 
     return developer_data, data
 
-
-async def retrieve_app_info_async(store, app_id):
-    """
-    Asynchronously retrieves app information based on the app_id.
-    """
-    from .models import AppDetail
-
-    try:
-        app = await AppDetail.objects.filter(Q(appID=app_id) & Q(store__name=store)).select_related("developer", "genre", "store").afirst()
-        app_detail = AppDetailSchema.from_orm(app)
-        app_detail_dict = app_detail.dict()
-        del app_detail_dict['developer']['slug']
-        return app_detail_dict
-    except Exception:
-        return {"error": "App not found in the database."}
-
-
-async def generate_response_async(messages):
-    """
-    Streams data asynchronously from the `llm.stream`.
-    """
-    try:
-        async for chunk in llm.astream(messages):
-            yield "event: assistant\n"
-            yield f"data: {json.dumps({'m': chunk.content})}\n\n"
-    except Exception as e:
-        yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
 
 class BaseAppStoreData:

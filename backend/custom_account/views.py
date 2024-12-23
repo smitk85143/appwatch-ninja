@@ -41,19 +41,16 @@ async def register_user(request, payload: schemas.RegistrationSchema):
     
 
 @router.post("/token-verify", response={200: schemas.ResponseVerifyTokenSchema, 400: dict})
-async def verify_token(request, payload: schemas.TokenSchema):
+async def verify_access_token(request, payload: schemas.TokenSchema):
     try:
-        # Decode the token and verify its validity
         payload = jwt.decode(payload.token, settings.JWT_SECRET, algorithms=["HS256"])
         
-        # You can optionally fetch the user to confirm the token is valid
         user_id = payload.get("user_id")
         
         user = await sync_to_async(User.objects.get)(id=user_id)
         if not user:
             return 400, {"error": "Invalid token", "status": "TOKEN_INVALID"}
 
-        # If you want to return user info in the response, you can do so here
         return 200, {"message": "Token is valid", "status": "TOKEN_VALID"}
 
     except jwt.ExpiredSignatureError:
@@ -64,7 +61,7 @@ async def verify_token(request, payload: schemas.TokenSchema):
         return 400, {"error": str(e), "status": "TOKEN_INVALID"}
     
     
-@router.post("/token-refresh", response={200: schemas.ResponseAccessRefreshTokenSchema, 400: dict})
+@router.post("/token-refresh", response={200: schemas.ResponseAccessTokenSchema, 400: dict})
 async def refresh_token(request, payload: schemas.TokenSchema):
     try:
         payload = jwt.decode(payload.token, settings.JWT_SECRET, algorithms=["HS256"])
@@ -120,6 +117,9 @@ async def verify_otp(request, payload: schemas.UserOTPSchema):
             return 403, {"error": "OTP expired, a new one has been sent", "user_id": new_slug}
         elif str(payload.otp) == str(user.otp):
             user.is_user_verified = True
+            client_ip, is_routable = get_client_ip(request)
+            if client_ip:
+                user.last_login_ip = client_ip
             await sync_to_async(user.save)()
 
             access_token = utils.create_access_token(user)
@@ -186,18 +186,42 @@ async def free_to_premium(request):
 
 
 @router.post("/auth/google", auth=None)
-def google_login(request, payload: schemas.TokenSchema):
+async def google_login(request, payload: schemas.TokenSchema):
 
-    token_info = utils.validate_google_id_token(payload.token)
+    token_info = await sync_to_async(utils.validate_google_id_token)(payload.token)
     if not token_info:
         return HttpError(400, "Invalid ID token")
 
     email = token_info.get("email")
-    if str(token_info.get("email_verified")).lower() == "true":
+    if not email:
+        return HttpError(400, "Email is missing in the ID token")
+
+    if str(token_info.get("email_verified")).lower() != "true":
         return HttpError(400, "Email is not verified by Google")
-    user, created = User.objects.get_or_create(email=email, defaults={"is_user_verified": True})
 
-    access_token = utils.create_access_token(user)
-    refresh_token = utils.create_refresh_token(user)
+    client_ip, is_routable = await sync_to_async(get_client_ip)(request)
 
-    return {"message": "User logged in successfully", "access": access_token, "refresh": refresh_token}
+    user, created = await sync_to_async(User.objects.get_or_create)(
+        email=email, defaults={
+            "is_user_verified": True
+        }
+    )
+
+    if client_ip:
+
+        if created:
+            user.account_created_ip = client_ip
+            user.last_login_ip = client_ip
+            await sync_to_async(user.save)()
+        else:
+            user.last_login_ip = client_ip
+            await sync_to_async(user.save)()
+
+    access_token = await sync_to_async(utils.create_access_token)(user)
+    refresh_token = await sync_to_async(utils.create_refresh_token)(user)
+
+    return {
+        "message": "User logged in successfully",
+        "access": access_token,
+        "refresh": refresh_token,
+    }

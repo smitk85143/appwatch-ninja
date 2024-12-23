@@ -5,7 +5,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - .env.production
+      - .env
     volumes:
       - static_volume:/home/app/staticfiles
     image: smitkukadiyabvminfotech/playstore_frontend:appwatch_backend
@@ -13,7 +13,6 @@ services:
       - 8000
     depends_on:
       - redis
-      - elasticsearch
       - ollama
 
   redis:
@@ -49,22 +48,23 @@ services:
       - web
       - redis
 
-  elasticsearch:
-    image: elasticsearch:7.17.25
-    volumes:
-      - esdata01:/usr/share/elasticsearch/data
-    ports:
-      - 9200:9200
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-
   ollama:
     image: ollama/ollama:latest
     volumes:
       - ./ollama/ollama:/root/.ollama
     ports:
-      - 11434:11434
+      - "127.0.0.1:11434:11434"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
 
 volumes:
   static_volume:
@@ -72,4 +72,4 @@ volumes:
   html:
   vhost:
   acme:
-  esdata01:
+  postgres_data:
