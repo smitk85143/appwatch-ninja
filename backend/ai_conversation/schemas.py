@@ -27,3 +27,4 @@ class RequestDeveloperSchema(Schema):
 
 class RequestNormalSchema(Schema):
     message: str
+    conversation_id: str | None = None

@@ -1,25 +1,24 @@
 import json
 from datetime import timedelta
+from django.utils import timezone
 from django.conf import settings
 from django.db.models import Q
 from langchain_ollama import ChatOllama
 from django.http import StreamingHttpResponse
 from asgiref.sync import sync_to_async
-from django.utils import timezone
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt import tools_condition
 
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableLambda, Runnable, RunnableConfig
 from langgraph.prebuilt import ToolNode
 
 import uuid
 from typing import Annotated
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable, RunnableConfig
 from langgraph.graph.message import AnyMessage, add_messages
 from typing_extensions import TypedDict
 
@@ -34,22 +33,46 @@ llm = ChatOllama(
     temperature=0,
 )
 
-def get_app_informations(query_app_name: str) -> dict:
-    """Fetches an app informations by name and returns app details."""
-    try:
-        app = AppDetail.objects.filter(name__icontains=query_app_name).first()
+def get_app_informations(query_app_name: str, store_name: str = "google") -> dict:
+    """
+    Fetches app information by name and optionally filters by store name. 
 
+    Args:
+        query_app_name (str): The name of the app to search for.
+        store_name (str): The name of the store to filter results ('apple', 'google'). Defaults to 'google' if not provided.
+
+    Returns:
+        dict: A dictionary containing app details, or an empty dictionary if not found.
+    """
+    try:
+        query = AppDetail.objects.filter(name__icontains=query_app_name)
+
+        if store_name:
+            query = query.filter(store__name__icontains=store_name)
+
+        app = query.first()
         if not app:
             return {}
+        
         app_data = {
             "name": app.name,
-            "description": app.description,
-            "userAvgRating": app.userAvgRating,
+            "appID": app.appID,
+            "user average rating": app.userAvgRating,
             "genre": app.genre.genre,
+            "developer": app.developer.sellerName,
             "current version": app.currentVersion,
             "current version date": app.currentVersionDate,
             "released date": app.released,
             "rating distribution [1 star, 2 star, 3 star, 4 star, 5 star]": app.histogram,
+            "total installation by date wise": app.downloads,
+            "reviews": app.reviews,
+            "free": app.free,
+            "contains ads": app.containsAds,
+            "offers IAP": app.offersIAP,
+            "developer website": app.developerWebsite,
+            "developer email": app.developerEmail,
+            "privacy policy": app.privacyPolicy,
+
         }
         return app_data
 
@@ -71,7 +94,7 @@ class Assistant:
         """
         self.runnable = runnable
 
-    def __call__(self, state: State, config: RunnableConfig):
+    async def __call__(self, state: State, config: RunnableConfig):
         """
         Call method to invoke the LLM and handle its responses.
         Re-prompt the assistant if the response is not a tool call or meaningful text.
@@ -83,8 +106,20 @@ class Assistant:
         Returns:
             dict: The final state containing the updated messages.
         """
-        while True:
-            result = self.runnable.invoke(state)  # Invoke the LLM
+        # while True:
+        #     result = self.runnable.invoke(state)  # Invoke the LLM
+        #     if not result.tool_calls and (
+        #         not result.content
+        #         or isinstance(result.content, list)
+        #         and not result.content[0].get("text")
+        #     ):
+        #         messages = state["messages"] + [("user", "Respond with a real output.")]
+        #         state = {**state, "messages": messages}
+        #     else:
+        #         break
+        # return {"messages": result}
+
+        async for result in self.runnable.astream(state, config):
             if not result.tool_calls and (
                 not result.content
                 or isinstance(result.content, list)
@@ -93,15 +128,14 @@ class Assistant:
                 messages = state["messages"] + [("user", "Respond with a real output.")]
                 state = {**state, "messages": messages}
             else:
-                break
-        return {"messages": result}
+                yield {"messages": result}
 
 
-# Create the primary assistant prompt template
 primary_assistant_prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
+            f"Current Date: {timezone.now()}\n"
             "You are an intelligent assistant specializing in providing detailed and accurate information about mobile applications. "
             "You can answer user queries regarding app details, such as the app's name, description, rating, developer, genre, installs, and other relevant features. "
             "Please provide concise, informative, and professional responses. If a user asks about something unrelated to apps, kindly inform them that you can only assist with app-related queries. "
@@ -113,7 +147,6 @@ primary_assistant_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# Prompt our LLM and bind tools
 assistant_runnable = primary_assistant_prompt | llm.bind_tools([get_app_informations])
 
 
@@ -136,14 +169,11 @@ def handle_tool_error(state: State) -> dict:
         ]
     }
 
-# Graph
 builder = StateGraph(State)
 
-# Define nodes: these do the work
 builder.add_node("assistant", Assistant(assistant_runnable))
 builder.add_node("tools", create_tool_node_with_fallback([get_app_informations]))
 
-# Define edges: these determine how the control flow moves
 builder.add_edge(START, "assistant")
 builder.add_conditional_edges(
     "assistant",
@@ -153,18 +183,54 @@ builder.add_conditional_edges(
 )
 builder.add_edge("tools", "assistant")
 
-# The checkpointer lets the graph persist its state
 memory = MemorySaver()
 react_graph = builder.compile(checkpointer=memory)
 
 
 
-def predict_react_agent_answer(example: dict):
+async def predict_react_agent_answer(example: dict, ai_conversation: models.AiConversation):
     """Use this for answer evaluation"""
-
+    yield "event: conversation\n"
+    yield f"data: {json.dumps({'conversation_id': ai_conversation.slug})}\n\n"
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-    messages = react_graph.invoke({"messages": ("user", example["input"])}, config)
-    return {"response": messages["messages"][-1].content, "messages": messages}
+
+    conversation_history = []
+    for entry in ai_conversation.conversation_data:
+        message_content = (
+            entry['message']['content'] if isinstance(entry['message'], dict) else entry['message']
+        )
+        
+        if entry['type'] == 'assistant':
+            conversation_history.append(("assistant", message_content))
+        elif entry['type'] == 'human':
+            conversation_history.append(("human", message_content))
+
+    async for result in react_graph.astream({"messages": conversation_history}, config):
+        if result.get("tools"):
+            for message in result['tools']["messages"]:
+                yield "event: tools\n"
+                yield f"data: {message.content}\n\n"
+                ai_conversation.conversation_data.append({
+                    'id': message.id,
+                    'type': 'tool',
+                    'message': message.content,
+                    'timestamp': str(timezone.now()),
+                })
+            continue
+        response_message = {'content': result['assistant']["messages"].content}
+        if response_message.get("content") == "":
+            continue
+        yield "event: assistant\n"
+        yield f"data: {response_message}\n\n"
+        ai_conversation.conversation_data.append({
+                'id': result['assistant']["messages"].id,
+                'type': 'assistant',
+                'message': response_message,
+                'timestamp': str(timezone.now()),
+            })
+    ai_conversation.status = models.AiResponseStatus.COMPLETED
+    ai_conversation.conversation_end = timezone.now()
+    await sync_to_async(ai_conversation.save)()
 
 
 async def retrieve_app_info_async(store, app_id):
@@ -237,6 +303,7 @@ def prepare_messages(app_info, user_message):
     if "error" not in app_info:
         app_context = (
             "system",
+            f"Current Date: {timezone.now()}\n"
             "You are an intelligent assistant specializing in providing detailed and accurate information about mobile applications. "
             "You can answer user queries regarding app details, such as the app's name, description, rating, developer, genre, installs, and other relevant features. "
             "Please provide concise, informative, and professional responses. If a user asks about something unrelated to apps, kindly inform them that you can only assist with app-related queries. "
@@ -269,7 +336,18 @@ def prepare_messages(app_info, user_message):
     return [("system", app_info["error"]), ("human", user_message)]
 
 
-async def get_or_create_ai_conversation(user, app_obj):
+async def get_or_create_ai_conversation(user, app_obj=None, conversation_id=None):
+    if app_obj is None:
+        if conversation_id is not None:
+            return await sync_to_async(models.AiConversation.objects.get)(
+                user=user,
+                conversation_type=models.ConversationType.NORMAL,
+                slug=conversation_id,
+            ), None
+        return await sync_to_async(models.AiConversation.objects.create)(
+            user=user,
+            conversation_type=models.ConversationType.NORMAL,
+        ), None
     return await sync_to_async(models.AiConversation.objects.get_or_create)(
         user=user,
         conversation_type=models.ConversationType.APP,

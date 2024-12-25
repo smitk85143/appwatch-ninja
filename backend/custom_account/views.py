@@ -177,14 +177,6 @@ async def change_password(request, payload: schemas.ChangePasswordSchema):
     return {"message": "Password changed successfully"}
 
 
-@router.get("/free_to_premium", auth=AuthBearer())
-async def free_to_premium(request):
-    user = request.auth
-    user.subscription_type = "premium"
-    await sync_to_async(user.save)()
-    return {"message": "User is now premium"}
-
-
 @router.post("/auth/google", auth=None)
 async def google_login(request, payload: schemas.TokenSchema):
 
