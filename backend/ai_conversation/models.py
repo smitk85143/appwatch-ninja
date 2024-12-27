@@ -26,6 +26,7 @@ class AiResponseStatus(models.TextChoices):
 
 
 class AiConversation(models.Model):
+    conversation_title = models.CharField(max_length=30, blank=True, null=True)
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     conversation_start = models.DateTimeField(auto_now_add=True)
     conversation_end = models.DateTimeField(null=True, blank=True)

@@ -139,9 +139,9 @@ primary_assistant_prompt = ChatPromptTemplate.from_messages(
             "You are an intelligent assistant specializing in providing detailed and accurate information about mobile applications. "
             "You can answer user queries regarding app details, such as the app's name, description, rating, developer, genre, installs, and other relevant features. "
             "Please provide concise, informative, and professional responses. If a user asks about something unrelated to apps, kindly inform them that you can only assist with app-related queries. "
-            "If you do not have enough information to answer a specific question, let the user know politely and guide them to ask for app-related details."
             "You have access to one tools: get_app_informations. "
             "For any user questions about app information, use the get_app_informations tool to get information about app. "
+            "If you do not have enough information to answer a specific question, let the user know politely and guide them to ask for app-related details."
         ),
         ("placeholder", "{messages}"),
     ]
@@ -187,6 +187,30 @@ memory = MemorySaver()
 react_graph = builder.compile(checkpointer=memory)
 
 
+async def title_generator_async(humanai: list):
+    """Generate title from conversation in 20 characters"""
+    title_generator_context = f"""
+    Generate a very concise title (maximum 20 characters) based on the conversation:
+    ```{humanai}```
+         Rules:
+         - Title must be 20 characters or less
+         - Be descriptive but brief
+         - Focus on the main topic/intent
+         - Use simple words
+         - No quotes or special characters
+         - Title should be in English
+         
+         """
+    try:
+        title_response = llm.invoke(title_generator_context).content
+        if isinstance(title_response, str) and len(title_response.strip()) > 0:
+            title = title_response.strip()[:20]
+            return title
+        return "New Conversation"
+    except Exception:
+        return "New Conversation"
+
+
 
 async def predict_react_agent_answer(example: dict, ai_conversation: models.AiConversation):
     """Use this for answer evaluation"""
@@ -228,6 +252,12 @@ async def predict_react_agent_answer(example: dict, ai_conversation: models.AiCo
                 'message': response_message,
                 'timestamp': str(timezone.now()),
             })
+    if ai_conversation.conversation_title is None:
+        conversation = [ ('human', conversation_history[-1][1]), ('assistant', response_message['content']) ]
+        conversation_title = await title_generator_async(conversation)
+        yield "event: title_generation\n"
+        yield f"data: {json.dumps({'title': conversation_title})}\n\n"
+        ai_conversation.conversation_title = conversation_title
     ai_conversation.status = models.AiResponseStatus.COMPLETED
     ai_conversation.conversation_end = timezone.now()
     await sync_to_async(ai_conversation.save)()

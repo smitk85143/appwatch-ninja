@@ -170,3 +170,4 @@ cython_debug/
 
 ollama/
 whoosh_index/
+db/

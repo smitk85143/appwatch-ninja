@@ -1,5 +1,7 @@
-from ninja import Schema
+from ninja import Schema, ModelSchema
 from pydantic import field_validator
+
+from .models import AiConversation
 
 class RequestOllamaSchema(Schema):
     store: str
@@ -28,3 +30,15 @@ class RequestDeveloperSchema(Schema):
 class RequestNormalSchema(Schema):
     message: str
     conversation_id: str | None = None
+
+
+class ResponseConversationSchema(Schema):
+    conversation_id: str
+    conversation_title: str
+    status: str
+
+class ResponseNormalSchema(ModelSchema):
+
+    class Meta:
+        model = AiConversation
+        fields = ['conversation_end', 'conversation_data', 'status']

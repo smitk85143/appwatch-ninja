@@ -30,4 +30,5 @@ dependencies = [
     "whoosh>=2.7.4",
     "yake>=0.4.8",
     "langgraph>=0.2.60",
+    "pydantic[email]>=2.10.2",
 ]

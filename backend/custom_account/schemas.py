@@ -1,8 +1,8 @@
 from ninja import Schema
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, EmailStr
 
 class RegistrationSchema(Schema):
-    email: str
+    email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
 
 
@@ -11,7 +11,7 @@ class UserIdSchema(Schema):
 
 
 class LoginSchema(Schema):
-    email: str
+    email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
 
 

@@ -1,9 +1,11 @@
+from typing import List
 from ninja import Router
 from django.http import StreamingHttpResponse
 from asgiref.sync import sync_to_async
 
 from . import schemas, utils
 from custom_account.security import AuthBearer
+from .models import AiConversation, ConversationType
 
 router = Router(auth=AuthBearer())
 
@@ -66,3 +68,19 @@ async def normal_conversation(request, payload: schemas.RequestNormalSchema):
         content_type="text/event-stream; charset=utf-8"
     )
     return response
+
+
+@router.get("/all-normal-conversation", response=List[schemas.ResponseConversationSchema])
+async def get_all_normal_conversation(request):
+    user = request.user
+    ai_conversations = await sync_to_async(list)(AiConversation.objects.filter(user=user, conversation_type=ConversationType.NORMAL))
+    conversation_list = [ {"conversation_id": ai_conversation.slug, 'status': ai_conversation.status, "conversation_title": ai_conversation.conversation_title} 
+                         for ai_conversation in ai_conversations]
+    return conversation_list
+
+
+@router.get("/normal-conversation", response=schemas.ResponseNormalSchema)
+async def get_normal_conversation(request, conversation_id: str):
+    user = request.user
+    ai_conversation = await sync_to_async(AiConversation.objects.get)(slug=conversation_id, user=user)
+    return ai_conversation
