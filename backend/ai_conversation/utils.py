@@ -228,7 +228,7 @@ async def predict_react_agent_answer(example: dict, ai_conversation: models.AiCo
             conversation_history.append(("assistant", message_content))
         elif entry['type'] == 'human':
             conversation_history.append(("human", message_content))
-
+    print(conversation_history)
     async for result in react_graph.astream({"messages": conversation_history}, config):
         if result.get("tools"):
             for message in result['tools']["messages"]:
@@ -242,7 +242,7 @@ async def predict_react_agent_answer(example: dict, ai_conversation: models.AiCo
                 })
             continue
         response_message = {'content': result['assistant']["messages"].content}
-        if response_message.get("content") == "":
+        if response_message.get("content") == "" or '"type":"function"' in response_message.get("content"):
             continue
         yield "event: assistant\n"
         yield f"data: {response_message}\n\n"
