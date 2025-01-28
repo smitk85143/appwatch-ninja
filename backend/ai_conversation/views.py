@@ -33,7 +33,7 @@ async def app_conversation(request, payload: schemas.RequestOllamaSchema):
     app_info, app_obj = await utils.retrieve_app_info_async(payload.store, payload.app_id)
 
     ai_conversation, _ = await utils.get_or_create_ai_conversation(user, app_obj)
-    utils.update_ai_conversation(ai_conversation, payload.message)
+    await utils.update_ai_conversation(ai_conversation, payload.message)
 
     messages = utils.prepare_messages(app_info, payload.message)
 
@@ -62,7 +62,7 @@ async def normal_conversation(request, payload: schemas.RequestNormalSchema):
     if not payload.message:
         return utils.create_error_response("Invalid message")
     ai_conversation, _ = await utils.get_or_create_ai_conversation(user, conversation_id=payload.conversation_id)
-    utils.update_ai_conversation(ai_conversation, payload.message)
+    await utils.update_ai_conversation(ai_conversation, payload.message)
     response = StreamingHttpResponse(
         utils.predict_react_agent_answer({'input': payload.message}, ai_conversation), 
         content_type="text/event-stream; charset=utf-8"

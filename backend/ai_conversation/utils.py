@@ -385,7 +385,7 @@ async def get_or_create_ai_conversation(user, app_obj=None, conversation_id=None
     )
 
 
-def update_ai_conversation(ai_conversation, message):
+async def update_ai_conversation(ai_conversation, message):
     ai_conversation.conversation_data.append(
         {
             'type': 'human',
@@ -395,4 +395,4 @@ def update_ai_conversation(ai_conversation, message):
     )
     ai_conversation.status = models.AiResponseStatus.ONGOING
     ai_conversation.conversation_end = None
-    sync_to_async(ai_conversation.save)()
+    await sync_to_async(ai_conversation.save)()

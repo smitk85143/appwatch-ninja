@@ -31,6 +31,54 @@ async def list_apps(
     return paginator.get_paginated_response(page, schemas.AppListDetailSchema)
 
 
+@router.get("/apps/v2", response=schemas.PaginatedResponseSchema)
+async def list_apps_v2(
+    request,
+    store: str = Query("google"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
+):
+    if store not in ["google", "apple"]:
+        raise HttpError(400, "Invalid store")
+    
+    offset = (page - 1) * page_size
+    
+    total = await AppDetail.objects.filter(
+        hide=False,
+        store__name=store
+    ).acount()
+    
+    total_pages = (total + page_size - 1) // page_size
+    
+    queryset = AppDetail.objects.filter(
+        hide=False,
+        store__name=store
+    ).select_related(
+        "genre", 
+        "store"
+    ).values(
+        'appID', 'name', 'icon', 'ratings', 'released', 'userAvgRating',
+        'genre__genreId', 'genre__genre', 'store__name'
+    )[offset:offset + page_size]
+    
+    results = await sync_to_async(list)(queryset)
+    
+    base_url = str(request.build_absolute_uri())
+    base_url = base_url.split('?')[0]
+    
+    def get_page_url(page_num):
+        return f"{base_url}?store={store}&page={page_num}&page_size={page_size}"
+    
+    return {
+        "count": total,
+        "next": get_page_url(page + 1) if page < total_pages else None,
+        "previous": get_page_url(page - 1) if page > 1 else None,
+        "first": get_page_url(1) if page > 1 else None,
+        "last": get_page_url(total_pages) if page < total_pages else None,
+        "results": results
+    }
+
+
 @router.post("/app", response=schemas.AppDetailSchema)
 async def single_app(
     request,
