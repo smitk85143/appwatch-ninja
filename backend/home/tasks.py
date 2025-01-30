@@ -1,3 +1,4 @@
+import time
 from celery import shared_task
 from google_play_scraper import app as google_app
 from django_countries import countries
@@ -89,12 +90,15 @@ def daily_task():
 
 @shared_task
 def check_removed_apps():
+    start_time = time.time()
     apps = AppDetail.objects.filter(removed=True)
     for app in apps:
         result, _ = crawl_app(app.appID, app.store.name)
         if result is not None:
             app.removed = False
             app.save()
+    end_time = time.time()
+    return end_time - start_time
 
 
 @shared_task
@@ -106,8 +110,11 @@ def save_user_desire_app():
 
 @shared_task
 def rebuild_index():
+    start_time = time.time()
     from haystack.management.commands import update_index
     update_index.Command().handle()
+    end_time = time.time()
+    return end_time - start_time
 
 
 def get_app_store_data():

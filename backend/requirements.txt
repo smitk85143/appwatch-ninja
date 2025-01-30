@@ -10,7 +10,7 @@ amqp==5.3.1
     # via kombu
 annotated-types==0.7.0
     # via pydantic
-anyio==4.7.0
+anyio==4.8.0
     # via
     #   httpx
     #   watchfiles
@@ -22,7 +22,7 @@ asgiref==3.8.1
     #   django
     #   django-cors-headers
     #   django-countries
-attrs==24.3.0
+attrs==25.1.0
     # via
     #   aiohttp
     #   service-identity
@@ -84,7 +84,7 @@ daphne==4.1.2
     # via appwatch-ninja (pyproject.toml)
 dj-database-url==2.3.0
     # via appwatch-ninja (pyproject.toml)
-django==5.1.4
+django==5.1.5
     # via
     #   appwatch-ninja (pyproject.toml)
     #   channels
@@ -109,7 +109,7 @@ django-ipware==7.0.1
     # via appwatch-ninja (pyproject.toml)
 django-ninja==1.3.0
     # via appwatch-ninja (pyproject.toml)
-django-timezone-field==7.0
+django-timezone-field==7.1
     # via django-celery-beat
 dnspython==2.7.0
     # via email-validator
@@ -129,13 +129,13 @@ h11==0.14.0
     # via
     #   httpcore
     #   uvicorn
-honeybadger==0.20.2
+honeybadger==0.20.3
     # via appwatch-ninja (pyproject.toml)
 httpcore==1.0.7
     # via httpx
 httptools==0.6.4
     # via uvicorn
-httpx==0.27.2
+httpx==0.28.1
     # via
     #   langgraph-sdk
     #   langsmith
@@ -163,26 +163,26 @@ jsonpointer==3.0.0
     # via jsonpatch
 kombu==5.4.2
     # via celery
-langchain==0.3.13
+langchain==0.3.17
     # via appwatch-ninja (pyproject.toml)
-langchain-core==0.3.28
+langchain-core==0.3.33
     # via
     #   langchain
     #   langchain-ollama
     #   langchain-text-splitters
     #   langgraph
     #   langgraph-checkpoint
-langchain-ollama==0.2.2
+langchain-ollama==0.2.3
     # via appwatch-ninja (pyproject.toml)
-langchain-text-splitters==0.3.4
+langchain-text-splitters==0.3.5
     # via langchain
-langgraph==0.2.60
+langgraph==0.2.68
     # via appwatch-ninja (pyproject.toml)
-langgraph-checkpoint==2.0.9
+langgraph-checkpoint==2.0.10
     # via langgraph
-langgraph-sdk==0.1.48
+langgraph-sdk==0.1.51
     # via langgraph
-langsmith==0.2.6
+langsmith==0.3.3
     # via
     #   langchain
     #   langchain-core
@@ -200,9 +200,9 @@ numpy==1.26.4
     # via
     #   langchain
     #   yake
-ollama==0.4.4
+ollama==0.4.7
     # via langchain-ollama
-orjson==3.10.12
+orjson==3.10.15
     # via
     #   langgraph-sdk
     #   langsmith
@@ -210,7 +210,7 @@ packaging==24.2
     # via
     #   django-haystack
     #   langchain-core
-prompt-toolkit==3.0.48
+prompt-toolkit==3.0.50
     # via click-repl
 propcache==0.2.1
     # via
@@ -228,7 +228,7 @@ pyasn1-modules==0.4.1
     # via service-identity
 pycparser==2.22
     # via cffi
-pydantic==2.10.4
+pydantic==2.10.6
     # via
     #   appwatch-ninja (pyproject.toml)
     #   django-ninja
@@ -240,7 +240,7 @@ pydantic-core==2.27.2
     # via pydantic
 pyjwt==2.10.1
     # via appwatch-ninja (pyproject.toml)
-pyopenssl==24.3.0
+pyopenssl==25.0.0
     # via twisted
 python-crontab==3.2.0
     # via django-celery-beat
@@ -274,7 +274,7 @@ segtok==1.5.11
     # via yake
 service-identity==24.2.0
     # via twisted
-setuptools==75.6.0
+setuptools==75.8.0
     # via
     #   autobahn
     #   incremental
@@ -285,10 +285,8 @@ six==1.17.0
     #   honeybadger
     #   python-dateutil
 sniffio==1.3.1
-    # via
-    #   anyio
-    #   httpx
-sqlalchemy==2.0.36
+    # via anyio
+sqlalchemy==2.0.37
     # via langchain
 sqlparse==0.5.3
     # via django
@@ -310,9 +308,10 @@ typing-extensions==4.12.2
     #   langchain-core
     #   pydantic
     #   pydantic-core
+    #   pyopenssl
     #   sqlalchemy
     #   twisted
-tzdata==2024.2
+tzdata==2025.1
     # via
     #   celery
     #   django
@@ -327,13 +326,13 @@ vine==5.1.0
     #   amqp
     #   celery
     #   kombu
-watchfiles==1.0.3
+watchfiles==1.0.4
     # via
     #   appwatch-ninja (pyproject.toml)
     #   uvicorn
 wcwidth==0.2.13
     # via prompt-toolkit
-websockets==14.1
+websockets==14.2
     # via uvicorn
 whitenoise==6.8.2
     # via appwatch-ninja (pyproject.toml)
@@ -349,3 +348,5 @@ zope-interface==7.2
     # via
     #   gevent
     #   twisted
+zstandard==0.23.0
+    # via langsmith
