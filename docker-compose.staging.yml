@@ -1,6 +1,9 @@
 services:
         
   web:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     env_file:
       - .env
     volumes:
@@ -17,6 +20,10 @@ services:
     restart: always
 
   celery_worker:
+    build: 
+      context: ./backend
+      args:
+        service: worker
     command: celery -A backend worker -l info -P gevent
     env_file:
       - .env
@@ -29,6 +36,10 @@ services:
     restart: always
 
   celery_beat:
+    build: 
+        context: ./backend
+        args:
+          service: beat
     command: celery -A backend beat -l info
     env_file:
       - .env
