@@ -115,9 +115,10 @@ jobs:
 
               # Proceed with the deployment
               mkdir -p /path/to/appwatch-ninja/
-              cd /path/to/appwatch-ninja/
 
             fi
+
+            cd /path/to/appwatch-ninja/
 
             # Start necessary infrastructure services if not running
             for service in nginx-proxy acme-companion postgres; do
