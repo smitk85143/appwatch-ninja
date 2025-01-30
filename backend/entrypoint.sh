@@ -30,12 +30,8 @@ if [ "$1" = "celery" ]; then
   shift
   exec uv run celery "$@"
 else
-  # Clear and update search index
-  uv run python3 manage.py clear_index --noinput
 
   uv run python3 $APP_HOME/manage.py collectstatic --noinput
-
-  uv run python3 manage.py update_index
 
   # Start Gunicorn
   # exec gunicorn --config gunicorn_config.py playstore_frontend.wsgi:application

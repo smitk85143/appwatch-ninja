@@ -1,0 +1,142 @@
+name: Continuous Integration and Delivery
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - uses: actions/checkout@v2
+
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Copy docker-compose.staging.yml
+        run: cp docker-compose.staging.yml $HOME/docker-compose.staging.yml
+
+      - name: Create .env file
+        run: |
+          echo "CONFIGCAT_SDK_KEY=${{ secrets.CONFIGCAT_SDK_KEY }}" >> .env
+          echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
+          echo "CSRF_TRUSTED_ORIGINS=${{ secrets.CSRF_TRUSTED_ORIGINS }}" >> .env
+          echo "DJANGO_ALLOWED_HOSTS=${{ secrets.DJANGO_ALLOWED_HOSTS }}" >> .env
+          echo "DJANGO_ENV=${{ secrets.DJANGO_ENV }}" >> .env
+          echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> .env
+          echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}" >> .env
+          echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" >> .env
+          echo "GOOGLE_OAUTH2_CLIENT_ID=${{ secrets.GOOGLE_OAUTH2_CLIENT_ID }}" >> .env
+          echo "GOOGLE_OAUTH2_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH2_CLIENT_SECRET }}" >> .env
+          echo "HONEYBADGER_API_KEY=${{ secrets.HONEYBADGER_API_KEY }}" >> .env
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+          echo "LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}" >> .env
+          echo "LANGCHAIN_ENDPOINT=${{ secrets.LANGCHAIN_ENDPOINT }}" >> .env
+          echo "LANGCHAIN_PROJECT=${{ secrets.LANGCHAIN_PROJECT }}" >> .env
+          echo "LANGCHAIN_TRACING_V2=${{ secrets.LANGCHAIN_TRACING_V2 }}" >> .env
+          echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" >> .env
+          echo "LETSENCRYPT_HOST=${{ secrets.LETSENCRYPT_HOST }}" >> .env
+          echo "OLLAMA_URL=${{ secrets.OLLAMA_URL }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
+          echo "VIRTUAL_HOST=${{ secrets.VIRTUAL_HOST }}" >> .env
+          echo "VIRTUAL_PORT=${{ secrets.VIRTUAL_PORT }}" >> .env
+
+      - name: Install ssh
+        run: sudo apt-get install openssh-client
+
+      - name: Build the stack
+        run: docker-compose -f docker-compose.staging.yml build
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push to dockerhub
+        run: |
+          docker-compose push
+
+      - name: stop containers
+        run: docker-compose -f docker-compose.staging.yml down --volumes
+
+      - name: Upload .env file to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: "root"
+          password: ${{ secrets.VPS_IP_PASSWORD }}
+          source: ".env"
+          target: "/path/to/appwatch-ninja"
+
+      - name: Copy docker-compose.production.yml
+        run: cp docker-compose.production.yml $HOME/docker-compose.production.yml
+
+      - name: Upload docker-compose.production.yml to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: "root"
+          password: ${{ secrets.VPS_IP_PASSWORD }}
+          source: "docker-compose.production.yml"
+          target: "/path/to/appwatch-ninja"
+
+      - name: Executing remote command and deployment to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: "root"
+          port: 22
+          password: ${{ secrets.VPS_IP_PASSWORD }}
+          script: |
+            # Ensure Docker is installed
+            apt-get update
+            apt-get install -y docker.io
+
+            # Ensure Docker Compose is installed
+            DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+            mkdir -p $DOCKER_CONFIG/cli-plugins
+            curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+            chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+
+            # Proceed with the deployment
+            mkdir -p /path/to/appwatch-ninja/
+            cd /path/to/appwatch-ninja/
+
+            # Start necessary infrastructure services if not running
+            for service in nginx-proxy acme-companion postgres; do
+                if [ ! "$(docker ps -q -f name=$service)" ]; then
+                    echo "Starting $service..."
+                    docker compose -f docker-compose.production.yml up $service -d
+                fi
+            done
+
+            
+            # Check if web, celery_worker_backend, celery_beat_backend are running, stop if running
+            for service in web celery_worker celery_beat; do
+                if [ "$(docker ps -q -f name=$service)" ]; then
+                    echo "$service is running, stopping it..."
+                    docker compose -f docker-compose.production.yml stop $service
+                else
+                    echo "$service is not running."
+                fi
+            done
+
+            docker system prune -af
+
+            echo "${{secrets.DOCKER_PASSWORD}}" | docker login -u ${{secrets.DOCKER_USERNAME}} --password-stdin
+            docker compose -f docker-compose.production.yml pull web celery_worker celery_beat
+            docker compose -f docker-compose.production.yml up web celery_worker celery_beat -d --remove-orphans

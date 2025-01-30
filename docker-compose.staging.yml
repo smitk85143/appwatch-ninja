@@ -2,7 +2,7 @@ services:
         
   web:
     env_file:
-      - .env.production
+      - .env
     volumes:
       - static_volume:/home/app/web/staticfiles
     image: smitkukadiyabvminfotech/playstore_frontend:appwatch_backend
@@ -12,37 +12,6 @@ services:
     depends_on:
       - redis
 
-  nginx-proxy:
-    container_name: nginx-proxy
-    image: nginxproxy/nginx-proxy
-    restart: on-failure:10
-    volumes:
-      - static_volume:/home/app/web/staticfiles
-      - certs:/etc/nginx/certs
-      - html:/usr/share/nginx/html
-      - vhost:/etc/nginx/vhost.d
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    ports:
-      - 443:443
-      - 80:80
-    depends_on:
-      - web
-
-  acme-companion:
-    image: nginxproxy/acme-companion
-    restart: on-failure:10
-    environment:
-      - DEFAULT_EMAIL=smitk85143@gmail.com
-      - NGINX_PROXY_CONTAINER=nginx-proxy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - certs:/etc/nginx/certs
-      - html:/usr/share/nginx/html
-      - vhost:/etc/nginx/vhost.d
-      - acme:/etc/acme.sh
-    depends_on:
-      - nginx-proxy
-
   redis:
     image: redis:alpine
     restart: always
@@ -50,7 +19,7 @@ services:
   celery_worker:
     command: celery -A backend worker -l info -P gevent
     env_file:
-      - .env.production
+      - .env
     volumes:
       - static_volume:/home/app/web/staticfiles
     image: smitkukadiyabvminfotech/playstore_frontend:celery_worker
@@ -62,7 +31,7 @@ services:
   celery_beat:
     command: celery -A backend beat -l info
     env_file:
-      - .env.production
+      - .env
     volumes:
       - static_volume:/home/app/web/staticfiles
     image: smitkukadiyabvminfotech/playstore_frontend:celery_beat
@@ -83,7 +52,7 @@ services:
     container_name: postgres
     restart: unless-stopped
     env_file:
-      - .env.production
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -91,8 +60,4 @@ services:
 
 volumes:
   static_volume:
-  certs:
-  html:
-  vhost:
-  acme:
   postgres_data:

@@ -25,7 +25,7 @@ from market_intelligence.views import router as market_intelligence_router
 from aso_app.views import router as aso_router
 from ai_conversation.views import router as ai_conversation_router
 
-api = NinjaAPI()
+api = NinjaAPI(title="App Analysis API", version="0.0.1")
 
 api.add_router('/home/', home_router, tags=['Home'])
 api.add_router('/account/', account_router, tags=['Account'])

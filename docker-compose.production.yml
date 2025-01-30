@@ -1,0 +1,100 @@
+services:
+        
+  web:
+    env_file:
+      - .env
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    image: smitkukadiyabvminfotech/playstore_frontend:appwatch_backend
+    expose:
+      - 8000
+    restart: always
+    labels:
+      - "nginx.proxy=true"
+      - "nginx.proxy.services.web.loadbalancer.server.port=8000"
+    depends_on:
+      - redis
+      - ollama
+
+  nginx-proxy:
+    container_name: nginx-proxy
+    image: nginxproxy/nginx-proxy
+    restart: on-failure:10
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    ports:
+      - 443:443
+      - 80:80
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    restart: on-failure:10
+    environment:
+      - DEFAULT_EMAIL=smitk85143@gmail.com
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - acme:/etc/acme.sh
+    depends_on:
+      - nginx-proxy
+
+  redis:
+    image: redis:alpine
+    restart: always
+
+  celery_worker:
+    command: celery -A backend worker -l info -P gevent
+    env_file:
+      - .env
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    image: smitkukadiyabvminfotech/playstore_frontend:celery_worker
+    depends_on:
+      - web
+      - redis
+    restart: always
+
+  celery_beat:
+    command: celery -A backend beat -l info
+    env_file:
+      - .env
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    image: smitkukadiyabvminfotech/playstore_frontend:celery_beat
+    depends_on:
+      - web
+      - redis
+    restart: always
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+volumes:
+  static_volume:
+  certs:
+  html:
+  vhost:
+  acme:
+  postgres_data:
