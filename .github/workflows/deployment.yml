@@ -58,7 +58,7 @@ jobs:
         run: sudo apt-get install openssh-client
 
       - name: Build the stack
-        run: docker-compose -f docker-compose.staging.yml up -d --build --no-cache
+        run: docker-compose -f docker-compose.staging.yml up -d --build --force-recreate
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
