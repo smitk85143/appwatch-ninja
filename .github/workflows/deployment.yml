@@ -44,6 +44,8 @@ jobs:
           echo "LANGCHAIN_TRACING_V2=${{ secrets.LANGCHAIN_TRACING_V2 }}" >> .env
           echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" >> .env
           echo "LETSENCRYPT_HOST=${{ secrets.LETSENCRYPT_HOST }}" >> .env
+          echo "LETSENCRYPT_EMAIL=${{ secrets.MEILISEARCH_URL }}" >> .env
+          echo "LETSENCRYPT_HOST=${{ secrets.MEILI_MASTER_KEY }}" >> .env
           echo "OLLAMA_URL=${{ secrets.OLLAMA_URL }}" >> .env
           echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
           echo "POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}" >> .env
