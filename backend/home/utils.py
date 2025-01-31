@@ -80,7 +80,7 @@ class BaseAppStoreData:
             self.obj.crawl_country = CountryCode.objects.get(code=self.country_code)
         self.obj.save()
 
-        return self.obj.name
+        return self.obj
 
 class AppleAppStoreData(BaseAppStoreData):
     def __init__(self, obj, result, store, **kwargs):

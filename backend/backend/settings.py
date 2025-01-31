@@ -252,3 +252,8 @@ if not DEBUG:
     CSRF_COOKIE_SECURE=True
     SECURE_HSTS_PRELOAD=True
     SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+
+
+# MeiliSearch settings
+MEILISEARCH_URL = os.getenv('MEILISEARCH_URL', default='http://localhost:7700')
+MEILISEARCH_KEY = os.getenv('MEILI_MASTER_KEY')

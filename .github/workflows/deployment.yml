@@ -58,7 +58,7 @@ jobs:
         run: sudo apt-get install openssh-client
 
       - name: Build the stack
-        run: docker-compose -f docker-compose.staging.yml up -d --build
+        run: docker-compose -f docker-compose.staging.yml build
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -144,3 +144,6 @@ jobs:
             echo "${{secrets.DOCKER_PASSWORD}}" | docker login -u ${{secrets.DOCKER_USERNAME}} --password-stdin
             docker compose -f docker-compose.production.yml pull web celery_worker celery_beat
             docker compose -f docker-compose.production.yml up web celery_worker celery_beat -d --remove-orphans
+            sleep 10
+            docker compose -f docker-compose.production.yml exec -T web uv run manage.py shell -c "from home.tasks import create_index; create_index()"
+            docker compose -f docker-compose.production.yml exec -T web uv run manage.py shell -c "from home.tasks import rebuild_index_v2; rebuild_index_v2.delay()"

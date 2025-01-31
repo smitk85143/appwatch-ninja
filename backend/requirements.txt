@@ -33,12 +33,14 @@ automat==24.8.1
     # via twisted
 billiard==4.2.1
     # via celery
+camel-converter==4.0.1
+    # via meilisearch
 celery==5.4.0
     # via
     #   appwatch-ninja (pyproject.toml)
     #   django-celery-beat
     #   django-celery-results
-certifi==2024.12.14
+certifi==2025.1.31
     # via
     #   httpcore
     #   httpx
@@ -176,7 +178,7 @@ langchain-ollama==0.2.3
     # via appwatch-ninja (pyproject.toml)
 langchain-text-splitters==0.3.5
     # via langchain
-langgraph==0.2.68
+langgraph==0.2.69
     # via appwatch-ninja (pyproject.toml)
 langgraph-checkpoint==2.0.10
     # via langgraph
@@ -186,6 +188,8 @@ langsmith==0.3.3
     # via
     #   langchain
     #   langchain-core
+meilisearch==0.33.1
+    # via appwatch-ninja (pyproject.toml)
 msgpack==1.1.0
     # via
     #   channels-redis
@@ -231,6 +235,7 @@ pycparser==2.22
 pydantic==2.10.6
     # via
     #   appwatch-ninja (pyproject.toml)
+    #   camel-converter
     #   django-ninja
     #   langchain
     #   langchain-core
@@ -267,6 +272,7 @@ requests==2.32.3
     # via
     #   langchain
     #   langsmith
+    #   meilisearch
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via langsmith

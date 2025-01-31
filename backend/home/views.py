@@ -8,8 +8,12 @@ from haystack.query import SearchQuerySet
 from .paginations import CustomPaginator
 from . import schemas
 from .models import AppDetail, Developer
+from .search_indexes import SearchIndex
 
 router = Router()
+
+search_index = SearchIndex().get_index()
+search_index.update_searchable_attributes(['name', 'appID'])
 
 @router.get("/apps", response=schemas.PaginatedResponseSchema)
 async def list_apps(
@@ -154,5 +158,17 @@ async def search_apps(request, q: str = Query(...)):
         results = [result for result in results[:8]]
         return results
     
+    except Exception:
+        raise HttpError(400, "Invalid query")
+    
+
+@router.get("/search/v2", response=List[schemas.AppSearchDetailSchema])
+async def search_apps_v2(request, q: str = Query(...)):
+    if not q:
+        return []
+
+    try:
+        results = search_index.search(q, {'limit': 8, "attributesToHighlight": ["name", "appID"]})
+        return results['hits']
     except Exception:
         raise HttpError(400, "Invalid query")

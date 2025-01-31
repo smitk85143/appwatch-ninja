@@ -76,7 +76,7 @@ class AppSearchDetailSchema(Schema):
     appID: str
     name: str
     icon: str
-    store: str
+    store__name: str
     
 
 class PaginatedResponseSchema(Schema):

@@ -69,6 +69,16 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
 
+  meilisearch:
+    image: getmeili/meilisearch
+    env_file:
+      - .env
+    volumes:
+      - meili-search:/data.ms
+    ports:
+      - "127.0.0.1:7700:7700"
+
 volumes:
   static_volume:
+  meili-search:
   postgres_data:

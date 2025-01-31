@@ -39,7 +39,10 @@ async def app_conversation(request, payload: schemas.RequestOllamaSchema):
 
     response = StreamingHttpResponse(
         utils.generate_response_async(messages, ai_conversation, conversation_limit), 
-        content_type="text/event-stream; charset=utf-8"
+        content_type="text/event-stream; charset=utf-8",
+        headers={"Cache-Control": "no-cache",
+                 "Connection": "keep-alive",
+                 "X-Accel-Buffering": "no"}
     )
     return response
 

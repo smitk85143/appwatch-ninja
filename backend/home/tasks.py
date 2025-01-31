@@ -5,6 +5,8 @@ from django_countries import countries
 from itunes_app_scraper.scraper import AppStoreScraper
 from django.core.mail import EmailMessage
 from django.db.models import Q
+from meilisearch import Client
+from django.conf import settings
 
 from home.models import AppDetail, Store
 from user.models import UserWatchlist
@@ -35,14 +37,25 @@ def crawl_app(appID, store, country_code=None):
     return result, country_code
 
 
-def email_notification_desire_app(found, user_email, app_id, store):
+def email_notification_desire_app(found, user_email, app_id, store, saved_obj):
     if found:
         subject = 'App Store Optimization - App is now available'
         message = f'App with ID {app_id} is now available on {store} store.'
     else:
         subject = 'App Store Optimization - App is not available'
         message = f'App with ID {app_id} is not available on {store} store.'
-    rebuild_index()
+    if saved_obj:
+        client = Client(settings.MEILISEARCH_URL, settings.MEILISEARCH_KEY)
+        index = client.get_index("appdetails")
+
+        app_details = {
+            'id': saved_obj.id,
+            'appID': saved_obj.appID,
+            'store__name': saved_obj.store.name,
+            'name': saved_obj.name,
+            'icon': saved_obj.icon
+        }
+        index.add_documents([app_details])
     email = EmailMessage(subject, message, to=[user_email])
     email.send()
 
@@ -64,11 +77,11 @@ def save_store_data(appID, store, id=None, app_type=None):
     else:
         kwargs = {'country_code': country_code, 'app_type': app_type}
         app_data_class = AppleAppStoreData if store == 'apple' else GoogleAppStoreData
-        app_data_class(obj, result, store, **kwargs).save_data()
+        saved_obj = app_data_class(obj, result, store, **kwargs).save_data()
         email_result = True
 
     if id:
-        email_notification_desire_app(email_result, UserDesireApp.objects.get(pk=id).user.email, appID, store)
+        email_notification_desire_app(email_result, UserDesireApp.objects.get(pk=id).user.email, appID, store, saved_obj)
         UserDesireApp.objects.filter(pk=id).delete()
         
 
@@ -113,6 +126,28 @@ def rebuild_index():
     start_time = time.time()
     from haystack.management.commands import update_index
     update_index.Command().handle()
+    end_time = time.time()
+    return end_time - start_time
+
+
+def create_index():
+    client = Client(settings.MEILISEARCH_URL, settings.MEILISEARCH_KEY)
+    client.create_index("appdetails", {"primaryKey": "id"})
+
+
+@shared_task
+def rebuild_index_v2():
+    start_time = time.time()
+    client = Client(settings.MEILISEARCH_URL, settings.MEILISEARCH_KEY)
+    
+    index = client.get_index("appdetails")
+
+    app_details = list(AppDetail.objects.filter(hide=False).values("id", "appID", "store__name", "name", "icon"))
+    index.add_documents(app_details)
+    
+    hidden_app_ids = list(AppDetail.objects.filter(hide=True).values_list("id", flat=True))
+    if hidden_app_ids:
+        index.delete_documents(hidden_app_ids)
     end_time = time.time()
     return end_time - start_time
 
