@@ -1,4 +1,4 @@
-from celery import shared_task
+from celery import shared_task, group
 from google_play_scraper import list as google_list, app
 from django_countries import countries
 from django.db.models import Q
@@ -7,6 +7,9 @@ from aso import PositionKeywordApp, TrendKeywords
 from django.contrib.auth import get_user_model
 from celery.utils.log import get_task_logger
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from itertools import islice
+from django.core.cache import cache
 
 from backend.settings import exclude_countries, category
 from home.models import Genre, Store, AppDetail
@@ -18,6 +21,9 @@ User = get_user_model()
 logger = get_task_logger(__name__)
 
 appStoreScraper = AppStoreScraper()
+
+def chunked(iterable, n):
+    return iter(lambda: tuple(islice(iterable, n)), ())
 
 def update_of_country_rank(rank, column_name, app_data):
     if rank is not None:
@@ -39,16 +45,20 @@ def fetch_and_update(app_objs, category_list, code, update_string):
         update_of_country_rank(rank, update_string, {'app_obj':app_obj, 'country_code':code})
 
 def add_not_available_app(app_ids, data, genre):
-    try:
-        for app in app_ids:
-            if app not in data['all_app_ids']:
-                save_store_data.apply_async(args=[app, data['store_obj'].name, None, genre], priority=8)
-                data['all_app_ids'].append(app)
-    except Exception as e:
-        print(f"Error (add_not_available_app): {e}")
+    if app_ids:
+        existing_ids = set(data['all_app_ids'])
+        new_ids = [app for app in app_ids if app not in existing_ids]
+        if new_ids:
+            for batch in chunked(new_ids, 100):
+                save_store_data.apply_async(args=[list(batch), data['store_obj'].name, None, genre], priority=8)
+            data['all_app_ids'].extend(new_ids)
     return data['all_app_ids']
 
 def category_leaderboard(country_code, data, leaderboard_funtion, genre=None, main_genre=None):
+    cache_key = f"category_leaderboard_{country_code}_{genre}_{main_genre}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
     category_list = {}
     store_category = ['top-free', 'top-paid', 'topgrossingapplications'] if genre is not None and data['store_obj'].name == 'apple' else category[data['store_obj'].name]
     for i, single_category in enumerate(store_category):
@@ -60,13 +70,20 @@ def category_leaderboard(country_code, data, leaderboard_funtion, genre=None, ma
             else:
                 category_list[i] = []
         except Exception as e:
-            print(f"Error (category_leaderboard): {e} {country_code} {single_category} {genre} {main_genre}")
+            logger.error(f"Error (category_leaderboard): {e} {country_code} {single_category} {genre} {main_genre}", exc_info=True)
             category_list[i] = []
+    cache.set(cache_key, (category_list, data['all_app_ids']), timeout=43200)
     return category_list, data['all_app_ids']
 
 def get_genre_obj(store):
+    cache_key = f"genre_obj_{store}"
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
     genre_obj = Genre.objects.values_list('genreId', flat=True).distinct()
-    return [i for i in genre_obj if 'APPLE' not in i] if store == 'google' else [i for i in genre_obj if 'APPLE' in i]
+    result = [i for i in genre_obj if 'APPLE' not in i] if store == 'google' else [i for i in genre_obj if 'APPLE' in i]
+    cache.set(cache_key, result, timeout=604800)
+    return result
 
 def get_all_app_ids(store_obj):
     obj_list = AppDetail.objects.filter(store=store_obj).values_list('appID', flat=True)
@@ -89,20 +106,36 @@ def process_apple_store_leaderboard(store_countries, data, all_leaderboard):
         fetch_and_update(obj_list, category_list, code, "rank")
     return all_app_ids
 
+
+@shared_task
+def process_country_genre(store_obj, code, genre, all_app_ids, genre_leaderboard):
+    category_list, _ = category_leaderboard(code, {'store_obj': store_obj, "all_app_ids": all_app_ids}, genre_leaderboard, genre, genre)
+    app_objs = AppDetail.objects.filter(genre__genreId=genre, removed=False, store=store_obj)
+    fetch_and_update(app_objs, category_list, code, "genre_rank")
+
+
 def all_and_genre(store, all_leaderboard, genre_leaderboard):
     store_obj = Store.objects.get(name=store)
     all_app_ids = get_all_app_ids(store_obj)
     store_countries = [i[0] for i in countries if i[0] not in exclude_countries[store]]
     data = {"all_app_ids": all_app_ids, 'store_obj': store_obj}
     all_app_ids = process_google_store_main_genre_leaderboard(store_countries, data, genre_leaderboard) if store == 'google' else process_apple_store_leaderboard(store_countries, data, all_leaderboard)
+    # for code in store_countries:
+    #     for genre in get_genre_obj(store):
+    #         category_list, all_app_ids = category_leaderboard(code, data, genre_leaderboard, genre)
+    #         app_objs = AppDetail.objects.filter(Q(genre__genreId=genre) & Q(removed=False) & Q(store=store_obj))
+    #         fetch_and_update(app_objs, category_list, code, "genre_rank")
+    tasks = []
     for code in store_countries:
         for genre in get_genre_obj(store):
-            category_list, all_app_ids = category_leaderboard(code, data, genre_leaderboard, genre)
-            app_objs = AppDetail.objects.filter(Q(genre__genreId=genre) & Q(removed=False) & Q(store=store_obj))
-            fetch_and_update(app_objs, category_list, code, "genre_rank")
+            tasks.append(process_country_genre.delay(store_obj, code, genre, all_app_ids, genre_leaderboard))
+    
+    group(tasks).apply_async()
 
 @shared_task
 def country_rank():
+    start_time = time.time()
+    logger.info("Starting country_rank task")
     AppDetail.objects.filter(removed=True).update(
         rank={},
         genre_rank={},
@@ -111,6 +144,8 @@ def country_rank():
     )
     all_and_genre('google', "leaderboard", google_list)
     all_and_genre('apple', appStoreScraper.get_app_ids_for_collection, appStoreScraper.get_app_from_collection_category)
+    end_time = time.time()
+    logger.info(f"Country_rank task completed in {end_time - start_time:.2f} seconds")
 
 @shared_task
 def keyword_performance(app_id, select_country, store):

@@ -44,9 +44,9 @@ app.conf.beat_schedule = {
         'task': 'home.tasks.daily_task',
         'schedule': crontab(hour=0, minute=0),
     },
-    'add-daily-at-2-pm': {
+    'add-daily-at-9-am': {
         'task': 'aso_app.tasks.country_rank',
-        'schedule': crontab(hour=14, minute=0),
+        'schedule': crontab(hour=9, minute=0),
     },
     'add-daily-at-9-pm': {
         'task': 'home.tasks.check_removed_apps',
