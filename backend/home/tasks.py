@@ -7,10 +7,10 @@ from django.core.mail import EmailMessage
 from django.db.models import Q
 from meilisearch import Client
 from django.conf import settings
+from django.template.loader import render_to_string
 
 from home.models import AppDetail, Store
-from user.models import UserWatchlist
-from user.models import UserDesireApp
+from user.models import UserWatchlist, UserDesireApp
 from .utils import exclude_countries, AppleAppStoreData, GoogleAppStoreData
 
 appStoreScraper = AppStoreScraper()
@@ -38,25 +38,20 @@ def crawl_app(appID, store, country_code=None):
 
 
 def email_notification_desire_app(found, user_email, app_id, store, saved_obj):
-    if found:
-        subject = 'App Store Optimization - App is now available'
-        message = f'App with ID {app_id} is now available on {store} store.'
-    else:
-        subject = 'App Store Optimization - App is not available'
-        message = f'App with ID {app_id} is not available on {store} store.'
-    if saved_obj:
-        client = Client(settings.MEILISEARCH_URL, settings.MEILISEARCH_KEY)
-        index = client.get_index("appdetails")
+    subject = 'App Store Optimization - App is now available' if found else 'App Store Optimization - App is not available'
 
-        app_details = {
-            'id': saved_obj.id,
-            'appID': saved_obj.appID,
-            'store__name': saved_obj.store.name,
-            'name': saved_obj.name,
-            'icon': saved_obj.icon
-        }
-        index.add_documents([app_details])
-    email = EmailMessage(subject, message, to=[user_email])
+    # Render HTML template with context
+    context = {
+        "subject": subject,
+        "app_id": app_id,
+        "store": store,
+        "found": found,
+        "saved_obj": saved_obj,
+    }
+    html_message = render_to_string("emails/app-notification.html", context)
+
+    email = EmailMessage(subject, html_message, to=[user_email])
+    email.content_subtype = "html"  # Set content type to HTML
     email.send()
 
 
@@ -66,7 +61,7 @@ def save_store_data(appID, store, id=None, app_type=None):
     obj, _ = AppDetail.objects.get_or_create(appID=appID, store=store_obj)
     code = obj.crawl_country.code if obj.crawl_country else None
     result, country_code = crawl_app(appID, store, code)
-
+    saved_obj = None
     if result is None:
         if not obj.name:
             obj.delete()
@@ -81,8 +76,22 @@ def save_store_data(appID, store, id=None, app_type=None):
         email_result = True
 
     if id:
-        email_notification_desire_app(email_result, UserDesireApp.objects.get(pk=id).user.email, appID, store, saved_obj)
-        UserDesireApp.objects.filter(pk=id).delete()
+        userdesire_obj = UserDesireApp.objects.get(pk=id)
+        if saved_obj:
+            UserWatchlist.objects.create(user=userdesire_obj.user, app=saved_obj)
+            client = Client(settings.MEILISEARCH_URL, settings.MEILISEARCH_KEY)
+            index = client.get_index("appdetails")
+
+            app_details = {
+                'id': saved_obj.id,
+                'appID': saved_obj.appID,
+                'store__name': saved_obj.store.name,
+                'name': saved_obj.name,
+                'icon': saved_obj.icon
+            }
+            index.add_documents([app_details])
+        email_notification_desire_app(email_result, userdesire_obj.user.email, appID, store, saved_obj)
+        userdesire_obj.delete()
         
 
 @shared_task

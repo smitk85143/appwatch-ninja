@@ -13,7 +13,6 @@ from .search_indexes import SearchIndex
 router = Router()
 
 search_index = SearchIndex().get_index()
-search_index.update_searchable_attributes(['name', 'appID'])
 
 @router.get("/apps", response=schemas.PaginatedResponseSchema)
 async def list_apps(
@@ -168,6 +167,7 @@ async def search_apps_v2(request, q: str = Query(...)):
         return []
 
     try:
+        search_index.update_searchable_attributes(['name', 'appID'])
         results = search_index.search(q, {'limit': 8, "attributesToHighlight": ["name", "appID"]})
         return results['hits']
     except Exception:

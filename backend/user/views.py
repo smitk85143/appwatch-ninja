@@ -99,6 +99,9 @@ async def add_desire_app(request, payload: AddDesireAppSchema):
     if not user.is_authenticated:
         raise HttpError(401, "User not authenticated")
     try:
+        userdesire_objs = await sync_to_async(list)(UserDesireApp.objects.filter(user=user))
+        if len(userdesire_objs) > 5:
+            raise HttpError(400, "You can only add 5 apps at a time! Wait for them to be added.")
         store_obj = await sync_to_async(Store.objects.get)(name=payload.store)
         obj_exists = await sync_to_async(AppDetail.objects.filter(appID=payload.app_id, store=store_obj, hide=True).exists)()
         if obj_exists:
@@ -116,6 +119,7 @@ async def add_desire_app(request, payload: AddDesireAppSchema):
         )
         save_store_data.apply_async((payload.app_id, payload.store, obj.id))
         return {"message": "Your desired app will be added soon."}
-
+    except HttpError as e:
+        raise HttpError(400, str(e))
     except Exception:
         raise HttpError(400, "Invalid appID or store")

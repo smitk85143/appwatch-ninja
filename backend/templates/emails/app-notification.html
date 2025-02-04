@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ subject }}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #333;
+      background-color: #fff;
+    }
+
+    .container {
+      margin: 0 auto;
+      width: 100%;
+      max-width: 600px;
+      padding: 20px;
+      border-radius: 5px;
+      line-height: 1.8;
+      border: 1px solid #ddd;
+    }
+
+    .header {
+      font-size: 1.4em;
+      font-weight: 600;
+      color: #000;
+      border-bottom: 2px solid #00bc69;
+      padding-bottom: 10px;
+    }
+
+    .content {
+      padding: 15px 0;
+      font-size: 1.1em;
+    }
+
+    .app-details {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-details img {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+    }
+
+    .footer {
+      color: #888;
+      font-size: 0.9em;
+      text-align: center;
+      margin-top: 20px;
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">{{ subject }}</div>
+
+    <div class="content">
+      <p>
+        Hello, <br />
+        We wanted to inform you that the app with ID <strong>{{ app_id }}</strong>
+        is {% if found %} now available. This app is in your watchlist. {% else %} currently not available. {% endif %}
+      </p>
+
+      {% if saved_obj %}
+      <div class="app-details">
+        <a href="" target="_blank"><img src="{{ saved_obj.icon }}" alt="App Icon" /></a>
+        <div>
+          <strong>{{ saved_obj.name }}</strong> <br />
+          <small>Store: {{ saved_obj.store.name }}</small>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <hr style="border: none; border-top: 0.5px solid #131111" />
+    <div class="footer">
+      <p>This email can't receive replies.</p>
+      <p>
+        For more information about Insight Your App and your account, visit
+        <a href="https://dashboard.insightyourapp.com" target="_blank"><strong>Insight Your App</strong></a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

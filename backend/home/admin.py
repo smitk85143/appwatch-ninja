@@ -33,7 +33,7 @@ admin.site.register(Developer, DeveloperAdmin)
 
 class AppDetailAppsAdmin(ChangeOnlyAdmin):
     search_fields = ['appID', 'name', 'developer__sellerName']
-    list_display = ['name', 'appID', 'developer', 'userAvgRating', 'ratings', 'free']
+    list_display = ['name', 'appID', 'developer', 'userAvgRating', 'ratings',  'store', 'free', 'removed', 'hide']
 
 admin.site.register(AppDetail, AppDetailAppsAdmin)
 
