@@ -112,6 +112,29 @@ def country_rank():
     all_and_genre('google', "leaderboard", google_list)
     all_and_genre('apple', appStoreScraper.get_app_ids_for_collection, appStoreScraper.get_app_from_collection_category)
 
+
+@shared_task
+def google_country_rank():
+    AppDetail.objects.filter(removed=True, store=Store.objects.get(name='google')).update(
+        rank={},
+        genre_rank={},
+        grossing_rank={},
+        grossing_genre_rank={}
+    )
+    all_and_genre('google', "leaderboard", google_list)
+
+
+@shared_task
+def apple_country_rank():
+    AppDetail.objects.filter(removed=True, store=Store.objects.get(name='apple')).update(
+        rank={},
+        genre_rank={},
+        grossing_rank={},
+        grossing_genre_rank={}
+    )
+    all_and_genre('apple', appStoreScraper.get_app_ids_for_collection, appStoreScraper.get_app_from_collection_category)
+
+
 @shared_task
 def keyword_performance(app_id, select_country, store):
     try:
