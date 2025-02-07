@@ -14,27 +14,27 @@ class CustomPaginator:
         self.request = request
         self.paginator = Paginator(queryset, page_size)
 
-    def get_paginated_response(self, page_number: int, results_schema):
-        current_page: Page = self.paginator.get_page(page_number)
+    # def get_paginated_response(self, page_number: int, results_schema):
+    #     current_page: Page = self.paginator.get_page(page_number)
 
-        def build_url(page_number: Optional[int]) -> Optional[str]:
-            if page_number is None:
-                return None
-            query_params = self.request.GET.copy()
-            query_params['page'] = page_number
-            return urljoin(self.request.build_absolute_uri(self.request.path), f"?{urlencode(query_params)}")
+    #     def build_url(page_number: Optional[int]) -> Optional[str]:
+    #         if page_number is None:
+    #             return None
+    #         query_params = self.request.GET.copy()
+    #         query_params['page'] = page_number
+    #         return urljoin(self.request.build_absolute_uri(self.request.path), f"?{urlencode(query_params)}")
 
-        first_url = build_url(1) if page_number > 1 else None
-        last_url = build_url(self.paginator.num_pages) if current_page.number < self.paginator.num_pages else None
+    #     first_url = build_url(1) if page_number > 1 else None
+    #     last_url = build_url(self.paginator.num_pages) if current_page.number < self.paginator.num_pages else None
 
-        return {
-            "count": self.paginator.count,
-            "next": build_url(current_page.next_page_number() if current_page.has_next() else None),
-            "previous": build_url(current_page.previous_page_number() if current_page.has_previous() else None),
-            "first": first_url,
-            "last": last_url,
-            "results": [results_schema.from_orm(obj) for obj in current_page.object_list]
-        }
+    #     return {
+    #         "count": self.paginator.count,
+    #         "next": build_url(current_page.next_page_number() if current_page.has_next() else None),
+    #         "previous": build_url(current_page.previous_page_number() if current_page.has_previous() else None),
+    #         "first": first_url,
+    #         "last": last_url,
+    #         "results": [results_schema.from_orm(obj) for obj in current_page.object_list]
+    #     }
 
     async def get_paginated_response_for_developers(self, page_number: int, results_schema):
         current_page: Page = self.paginator.get_page(page_number)

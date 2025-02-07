@@ -14,24 +14,24 @@ router = Router()
 
 search_index = SearchIndex().get_index()
 
-@router.get("/apps", response=schemas.PaginatedResponseSchema)
-async def list_apps(
-    request,
-    store: str = Query("google"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1),
-):
-    if store not in ["google", "apple"]:
-        raise HttpError(400, "Invalid store")
+# @router.get("/apps", response=schemas.PaginatedResponseSchema)
+# async def list_apps(
+#     request,
+#     store: str = Query("google"),
+#     page: int = Query(1, ge=1),
+#     page_size: int = Query(10, ge=1),
+# ):
+#     if store not in ["google", "apple"]:
+#         raise HttpError(400, "Invalid store")
     
-    queryset = await sync_to_async(list)(
-        AppDetail.objects.filter(
-            Q(name__isnull=False) & Q(hide=False) & Q(store__name=store)
-        ).select_related("genre", "store")
-    )
+#     queryset = await sync_to_async(list)(
+#         AppDetail.objects.filter(
+#             Q(name__isnull=False) & Q(hide=False) & Q(store__name=store)
+#         ).select_related("genre", "store")
+#     )
 
-    paginator = CustomPaginator(queryset, page_size, request)
-    return paginator.get_paginated_response(page, schemas.AppListDetailSchema)
+#     paginator = CustomPaginator(queryset, page_size, request)
+#     return paginator.get_paginated_response(page, schemas.AppListDetailSchema)
 
 
 @router.get("/apps/v2", response=schemas.PaginatedResponseSchema)

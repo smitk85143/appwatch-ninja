@@ -2,12 +2,15 @@ from typing import List
 from ninja import Router
 from django.http import StreamingHttpResponse
 from asgiref.sync import sync_to_async
+from django.conf import settings
+import configcatclient
 
 from . import schemas, utils
 from custom_account.security import AuthBearer
 from .models import AiConversation, ConversationType
 
 router = Router(auth=AuthBearer())
+configcat_client = configcatclient.get(settings.CONFIGCAT_SDK_KEY)
 
 
 @router.post("/app-conversation")
@@ -15,6 +18,9 @@ async def app_conversation(request, payload: schemas.RequestOllamaSchema):
     """
     Handles the Ollama interaction asynchronously.
     """
+    my_setting_value = configcat_client.get_value('is_api_enabled', False)
+    if not my_setting_value:
+        return utils.create_error_response("Unable to process request, please try again later")
     user = request.user
     today_start, today_end = utils.get_today_time_range()
 

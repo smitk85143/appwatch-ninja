@@ -257,3 +257,6 @@ if not DEBUG:
 # MeiliSearch settings
 MEILISEARCH_URL = os.getenv('MEILISEARCH_URL', default='http://localhost:7700')
 MEILISEARCH_KEY = os.getenv('MEILI_MASTER_KEY')
+
+# ConfigCat settings
+CONFIGCAT_SDK_KEY = os.getenv('CONFIGCAT_SDK_KEY')

@@ -27,6 +27,7 @@ services:
       - html:/usr/share/nginx/html
       - vhost:/etc/nginx/vhost.d
       - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./proxy.conf:/etc/nginx/conf.d/proxy.conf:ro
     ports:
       - 443:443
       - 80:80

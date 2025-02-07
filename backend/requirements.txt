@@ -2,7 +2,7 @@
 #    uv pip compile pyproject.toml -o requirements.txt
 aiohappyeyeballs==2.4.4
     # via aiohttp
-aiohttp==3.11.11
+aiohttp==3.11.12
     # via langchain
 aiosignal==1.3.2
     # via aiohttp
@@ -73,6 +73,8 @@ colorama==0.4.6
     # via
     #   click
     #   uvicorn
+configcat-client==9.0.4
+    # via appwatch-ninja (pyproject.toml)
 constantly==23.10.4
     # via twisted
 cron-descriptor==1.4.5
@@ -86,7 +88,7 @@ daphne==4.1.2
     # via appwatch-ninja (pyproject.toml)
 dj-database-url==2.3.0
     # via appwatch-ninja (pyproject.toml)
-django==5.1.5
+django==5.1.6
     # via
     #   appwatch-ninja (pyproject.toml)
     #   channels
@@ -101,7 +103,7 @@ django-celery-beat==2.7.0
     # via appwatch-ninja (pyproject.toml)
 django-celery-results==2.5.1
     # via appwatch-ninja (pyproject.toml)
-django-cors-headers==4.6.0
+django-cors-headers==4.7.0
     # via appwatch-ninja (pyproject.toml)
 django-countries==7.6.1
     # via appwatch-ninja (pyproject.toml)
@@ -117,6 +119,8 @@ dnspython==2.7.0
     # via email-validator
 email-validator==2.2.0
     # via pydantic
+enum-compat==0.0.3
+    # via configcat-client
 frozenlist==1.5.0
     # via
     #   aiohttp
@@ -167,7 +171,7 @@ kombu==5.4.2
     # via celery
 langchain==0.3.17
     # via appwatch-ninja (pyproject.toml)
-langchain-core==0.3.33
+langchain-core==0.3.34
     # via
     #   langchain
     #   langchain-ollama
@@ -176,15 +180,15 @@ langchain-core==0.3.33
     #   langgraph-checkpoint
 langchain-ollama==0.2.3
     # via appwatch-ninja (pyproject.toml)
-langchain-text-splitters==0.3.5
+langchain-text-splitters==0.3.6
     # via langchain
-langgraph==0.2.69
+langgraph==0.2.70
     # via appwatch-ninja (pyproject.toml)
 langgraph-checkpoint==2.0.10
     # via langgraph
 langgraph-sdk==0.1.51
     # via langgraph
-langsmith==0.3.3
+langsmith==0.3.6
     # via
     #   langchain
     #   langchain-core
@@ -262,6 +266,8 @@ pyyaml==6.0.2
     #   langchain
     #   langchain-core
     #   uvicorn
+qualname==0.1.0
+    # via configcat-client
 redis==5.2.1
     # via
     #   appwatch-ninja (pyproject.toml)
@@ -270,6 +276,7 @@ regex==2024.11.6
     # via segtok
 requests==2.32.3
     # via
+    #   configcat-client
     #   langchain
     #   langsmith
     #   meilisearch
@@ -278,6 +285,8 @@ requests-toolbelt==1.0.0
     # via langsmith
 segtok==1.5.11
     # via yake
+semver==3.0.4
+    # via configcat-client
 service-identity==24.2.0
     # via twisted
 setuptools==75.8.0
@@ -292,7 +301,7 @@ six==1.17.0
     #   python-dateutil
 sniffio==1.3.1
     # via anyio
-sqlalchemy==2.0.37
+sqlalchemy==2.0.38
     # via langchain
 sqlparse==0.5.3
     # via django
@@ -340,7 +349,7 @@ wcwidth==0.2.13
     # via prompt-toolkit
 websockets==14.2
     # via uvicorn
-whitenoise==6.8.2
+whitenoise==6.9.0
     # via appwatch-ninja (pyproject.toml)
 whoosh==2.7.4
     # via appwatch-ninja (pyproject.toml)
