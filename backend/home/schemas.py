@@ -80,7 +80,7 @@ class SingleDeveloperSchema(Schema):
 
 
 class AppSearchDetailSchemaV2(Schema):
-    app_id: str
+    appID: str
     name: str
     icon: str
     store__name: str
