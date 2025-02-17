@@ -3,7 +3,7 @@ from ninja import Query, Router
 from ninja.errors import HttpError
 from django.db.models import Q
 from asgiref.sync import sync_to_async
-from haystack.query import SearchQuerySet
+# from haystack.query import SearchQuerySet
 
 from .paginations import CustomPaginator
 from . import schemas
@@ -140,28 +140,28 @@ async def single_Developer(
         HttpError(500, "An error occurred while fetching app data")
 
 
-@router.get("/search", response=List[schemas.AppSearchDetailSchema])
-async def search_apps(request, q: str = Query(...)):
-    if not q:
-        return []
+# @router.get("/search", response=List[schemas.AppSearchDetailSchema])
+# async def search_apps(request, q: str = Query(...)):
+#     if not q:
+#         return []
 
-    try:
-        results = await sync_to_async(list)(
-            SearchQuerySet()
-            .models(AppDetail)
-            .filter(appID=q, hide='false') |
-            SearchQuerySet()
-            .models(AppDetail)
-            .filter(name_ngram__icontains=q, hide='false')
-        )
-        results = [result for result in results[:8]]
-        return results
+#     try:
+#         results = await sync_to_async(list)(
+#             SearchQuerySet()
+#             .models(AppDetail)
+#             .filter(appID=q, hide='false') |
+#             SearchQuerySet()
+#             .models(AppDetail)
+#             .filter(name_ngram__icontains=q, hide='false')
+#         )
+#         results = [result for result in results[:8]]
+#         return results
     
-    except Exception:
-        raise HttpError(400, "Invalid query")
+#     except Exception:
+#         raise HttpError(400, "Invalid query")
     
 
-@router.get("/search/v2", response=List[schemas.AppSearchDetailSchema])
+@router.get("/search/v2", response=List[schemas.AppSearchDetailSchemaV2])
 async def search_apps_v2(request, q: str = Query(...)):
     if not q:
         return []

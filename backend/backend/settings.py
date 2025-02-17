@@ -56,7 +56,7 @@ EXTENDED_APPS = [
     "aso_app",
     "ai_conversation",
     'ninja',
-    'haystack',
+    # 'haystack',
     'django_celery_results',
     'django_celery_beat',
     'corsheaders',
@@ -178,12 +178,12 @@ NINJA_PAGINATION_PER_PAGE = 15
 #     },
 # }
 
-HAYSTACK_CONNECTIONS = {
-    'default': {
-        'ENGINE': 'haystack.backends.whoosh_backend.WhooshEngine',  # Use Whoosh backend
-        'PATH': os.path.join(BASE_DIR, 'whoosh_index'),  # Path to the index directory
-    }
-}
+# HAYSTACK_CONNECTIONS = {
+#     'default': {
+#         'ENGINE': 'haystack.backends.whoosh_backend.WhooshEngine',  # Use Whoosh backend
+#         'PATH': os.path.join(BASE_DIR, 'whoosh_index'),  # Path to the index directory
+#     }
+# }
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

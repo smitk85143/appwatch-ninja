@@ -81,6 +81,7 @@ services:
       - ./ollama/ollama:/root/.ollama
     ports:
       - "127.0.0.1:11434:11434"
+    restart: always
 
   postgres:
     image: postgres:16-alpine
@@ -101,6 +102,7 @@ services:
       - meili-search:/data.ms
     ports:
       - "127.0.0.1:7700:7700"
+    restart: always
 
 volumes:
   static_volume:

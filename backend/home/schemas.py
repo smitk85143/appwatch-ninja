@@ -72,8 +72,15 @@ class SingleDeveloperSchema(Schema):
     apps: List[DeveloperAppSchema]
 
 
-class AppSearchDetailSchema(Schema):
-    appID: str
+# class AppSearchDetailSchema(Schema):
+#     appID: str
+#     name: str
+#     icon: str
+#     store: str
+
+
+class AppSearchDetailSchemaV2(Schema):
+    app_id: str
     name: str
     icon: str
     store__name: str
