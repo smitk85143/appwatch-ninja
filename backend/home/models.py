@@ -66,7 +66,7 @@ class AppDetail(models.Model):
 
     appID = models.CharField(max_length=200, unique=True)
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    name = models.CharField(max_length=150, blank=True, null=True)
+    name = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     userAvgRating = models.FloatField(blank=True, null=True)
     ratings = models.BigIntegerField(blank=True, null=True)
