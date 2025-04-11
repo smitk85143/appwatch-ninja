@@ -84,9 +84,6 @@ jobs:
           source: ".env"
           target: "/path/to/appwatch-ninja"
 
-      - name: Copy docker-compose.production.yml
-        run: cp docker-compose.production.yml $HOME/docker-compose.production.yml
-
       - name: Upload docker-compose.production.yml to server
         uses: appleboy/scp-action@master
         with:
