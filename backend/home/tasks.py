@@ -73,7 +73,7 @@ def save_store_data(appID, store, id=None, app_type=None):
         kwargs = {'country_code': country_code, 'app_type': app_type}
         app_data_class = AppleAppStoreData if store == 'apple' else GoogleAppStoreData
         saved_obj = app_data_class(obj, result, store, **kwargs).save_data()
-        email_result = True
+        email_result = True if saved_obj is not None else False
 
     if id:
         userdesire_obj = UserDesireApp.objects.get(pk=id)

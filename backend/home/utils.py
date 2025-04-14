@@ -60,6 +60,8 @@ class BaseAppStoreData:
         self.country_code = kwargs.get('country_code', None)
 
     def save_data(self):
+        if self.genreId is None:
+            return None 
         genre_obj = Genre.objects.get_or_create(genreId=self.genreId, genre=self.genre)
         if self.app_type is not None:
             self.obj.app_type = self.app_type
@@ -85,6 +87,8 @@ class BaseAppStoreData:
 class AppleAppStoreData(BaseAppStoreData):
     def __init__(self, obj, result, store, **kwargs):
         super().__init__(obj, result, store, **kwargs)
+        if 'formattedPrice' not in result and 'price' not in result:
+            result['formattedPrice'] = 'Free'
         self.genreId, self.genre = self.apple_genre_id_to_name(result['primaryGenreId'], result['primaryGenreName'], result['formattedPrice'] == 'Free')
 
         self.developerId = result['artistId']
