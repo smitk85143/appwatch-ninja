@@ -33,6 +33,12 @@ app.conf.broker_transport_options = {
         'aso_app.tasks.country_rank': {
             'priority': 6,
         },
+        'aso_app.tasks.google_country_rank': {
+            'priority': 6,
+        },
+        'aso_app.tasks.apple_country_rank': {
+            'priority': 6,
+        },
         'home.tasks.check_removed_apps': {
             'priority': 4,
         }
@@ -55,6 +61,14 @@ app.conf.beat_schedule = {
     'add-daily-at-10-pm': {
         'task': 'home.tasks.rebuild_index',
         'schedule': crontab(hour=22, minute=0),
+    },
+    'add-mf-at-2-pm': {
+        'task': 'aso_app.tasks.google_country_rank',
+        'schedule': crontab(hour=14, minute=0, day_of_week='mon,fri'),
+    },
+    'add-w-at-2-pm': {
+        'task': 'aso_app.tasks.apple_country_rank',
+        'schedule': crontab(hour=14, minute=0, day_of_week='wed'),
     },
 }
 
