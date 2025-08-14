@@ -82,6 +82,123 @@ async def list_apps_v2(
     }
 
 
+@router.get("/apps/v3", response=schemas.PaginatedResponseSchema)
+async def list_apps_v3(
+    request,
+    store: str = Query("google", description="Store name (google/apple)"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
+    genre: str = Query(None, description="Filter by genre ID"),
+    rating_min: float = Query(None, ge=0, le=5, description="Minimum rating"),
+    rating_max: float = Query(None, ge=0, le=5, description="Maximum rating"),
+    downloads_min: int = Query(None, ge=0, description="Minimum downloads"),
+    released_after: str = Query(None, description="Released after date (YYYY-MM-DD)"),
+    released_before: str = Query(None, description="Released before date (YYYY-MM-DD)"),
+    sort_by: str = Query("userAvgRating", description="Sort field (userAvgRating, released, ratings, downloads)"),
+    sort_order: str = Query("desc", description="Sort order (asc, desc)"),
+):
+    """
+    Enhanced API endpoint that lists apps with advanced filtering options.
+    """
+    if store not in ["google", "apple"]:
+        raise HttpError(400, "Invalid store")
+        
+    if sort_order not in ["asc", "desc"]:
+        raise HttpError(400, "Invalid sort order. Use 'asc' or 'desc'")
+        
+    if sort_by not in ["userAvgRating", "released", "ratings", "downloads", "name"]:
+        raise HttpError(400, "Invalid sort field")
+    
+    filters = Q(hide=False) & Q(store__name=store)
+    
+    if genre:
+        filters &= Q(genre__genreId=genre)
+        
+    if rating_min is not None:
+        filters &= Q(userAvgRating__gte=rating_min)
+        
+    if rating_max is not None:
+        filters &= Q(userAvgRating__lte=rating_max)
+        
+    if downloads_min is not None:
+        filters &= Q(downloads__gte=downloads_min)
+        
+    try:
+        if released_after:
+            filters &= Q(released__gte=released_after)
+            
+        if released_before:
+            filters &= Q(released__lte=released_before)
+    except ValueError:
+        raise HttpError(400, "Invalid date format. Use YYYY-MM-DD")
+    
+    offset = (page - 1) * page_size
+    
+    sort_prefix = "" if sort_order == "asc" else "-"
+    order_by = f"{sort_prefix}{sort_by}"
+    
+    try:
+        queryset = await AppDetail.objects.filter(filters).acount()
+        total = await sync_to_async(lambda: queryset)()
+        if total == 0:
+            return {
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "first": None,
+                "last": None,
+                "results": []
+            }
+            
+        total_pages = (total + page_size - 1) // page_size
+        
+        if page > total_pages:
+            raise HttpError(404, f"Page {page} does not exist. Max page is {total_pages}")
+        
+        queryset = AppDetail.objects.filter(filters).select_related(
+                "genre", "store"
+            ).values(
+                'appID', 'name', 'icon', 'ratings', 'released', 'userAvgRating', 'downloads',
+                'genre__genreId', 'genre__genre', 'store__name'
+            ).order_by(order_by)[offset:offset + page_size]
+        
+        results = await sync_to_async(list)(queryset)
+        
+        base_url = str(request.build_absolute_uri()).split('?')[0]
+        
+        def get_page_url(page_num):
+            params = [f"store={store}", f"page={page_num}", f"page_size={page_size}"]
+            if genre: params.append(f"genre={genre}")
+            if rating_min is not None: params.append(f"rating_min={rating_min}")
+            if rating_max is not None: params.append(f"rating_max={rating_max}")
+            if downloads_min is not None: params.append(f"downloads_min={downloads_min}")
+            if released_after: params.append(f"released_after={released_after}")
+            if released_before: params.append(f"released_before={released_before}")
+            if sort_by: params.append(f"sort_by={sort_by}")
+            if sort_order: params.append(f"sort_order={sort_order}")
+            return f"{base_url}?{'&'.join(params)}"
+        
+        return {
+            "count": total,
+            "next": get_page_url(page + 1) if page < total_pages else None,
+            "previous": get_page_url(page - 1) if page > 1 else None,
+            "first": get_page_url(1) if page > 1 else None,
+            "last": get_page_url(total_pages) if page < total_pages else None,
+            "filters_applied": {
+                "store": store,
+                "genre": genre,
+                "rating_range": [rating_min, rating_max] if rating_min or rating_max else None,
+                "downloads_min": downloads_min,
+                "released_range": [released_after, released_before] if released_after or released_before else None,
+                "sort": {"field": sort_by, "order": sort_order}
+            },
+            "results": results
+        }
+        
+    except Exception as e:
+        raise HttpError(500, f"Database error: {str(e)}")
+
+
 @router.post("/app", response=schemas.AppDetailSchema)
 async def single_app(
     request,
